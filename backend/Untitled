@@ -1,0 +1,5 @@
+DATABASE_URL=postgresql+psycopg://neondb_owner:npg_ukl9yMxLAO3i@ep-flat-frost-angpm1m2.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require
+SECRET_KEY=882f8874a1e3411c94ae0ab30a4fe4e06c9995bbe3fbde63b6bc8c134e5b7b89827f7d50919263d008078f4e58cd28ec2f0d8027c594c5383019ac9fe52e5dd4
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+ENVIRONMENT=development
