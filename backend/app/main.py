@@ -42,8 +42,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+
 # ── Routers ───────────────────────────────────────────────────
+from app.routers import auth, children, villages
+
 app.include_router(auth.router)
+app.include_router(children.router)
+app.include_router(villages.router)
 
 
 # ── Health Check ──────────────────────────────────────────────
