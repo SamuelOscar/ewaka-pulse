@@ -44,14 +44,15 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 
 # ── Routers ───────────────────────────────────────────────────
-from app.routers import auth, children, villages, dashboard, attendance
+from app.routers import auth, children, villages, dashboard, attendance, grades, staff
 
 app.include_router(auth.router)
 app.include_router(children.router)
 app.include_router(villages.router)
 app.include_router(dashboard.router)
 app.include_router(attendance.router)
-
+app.include_router(grades.router)
+app.include_router(staff.router)
 # ── Health Check ──────────────────────────────────────────────
 @app.get("/health")
 def health_check():

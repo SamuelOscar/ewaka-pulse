@@ -5,6 +5,7 @@ from app.models.staff import Staff, EmploymentType, StaffStatus
 from app.models.audit_log import AuditLog
 from app.models.class_group import ClassGroup
 from app.models.attendance import Attendance, AttendanceStatus
+from app.models.grade import Grade, Term
 
 __all__ = [
     "User", "UserRole",
@@ -14,4 +15,5 @@ __all__ = [
     "AuditLog",
     "ClassGroup",
     "Attendance", "AttendanceStatus",
+    "Grade", "Term",
 ]
