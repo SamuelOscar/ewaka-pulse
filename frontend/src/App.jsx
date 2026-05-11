@@ -3,6 +3,8 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Children from './pages/Children'
+import ChildDetail from './pages/ChildDetail'
 
 export default function App() {
   return (
@@ -15,6 +17,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/children"
+            element={
+              <ProtectedRoute>
+                <Children />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/children/:id"
+            element={
+              <ProtectedRoute>
+                <ChildDetail />
               </ProtectedRoute>
             }
           />

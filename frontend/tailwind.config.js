@@ -17,6 +17,12 @@ export default {
           700: '#0369a1',
           800: '#075985',
           900: '#0c4a6e',
+        },
+        ewaka: {
+          red:   '#C0392B',
+          gold:  '#F1C40F',
+          green: '#27AE60',
+          dark:  '#1a1a1a',
         }
       }
     },
