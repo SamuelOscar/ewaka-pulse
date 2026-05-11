@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from app.config import get_settings
-from app.routers import auth
 
 settings = get_settings()
 
 # ── App Instance ──────────────────────────────────────────────
-# docs_url and redoc_url are None in production — security spec
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -15,19 +15,22 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────
-# SECURITY: Only whitelisted origins. Never wildcard (*).
+# MUST be added before any other middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# ── Security Headers Middleware ───────────────────────────────
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
+# ── Security Headers Middleware ───────────────────────────────
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -40,8 +43,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
         return response
 
-app.add_middleware(SecurityHeadersMiddleware)
 
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────
 from app.routers import auth, children, villages, dashboard, attendance, grades, staff
@@ -53,10 +56,11 @@ app.include_router(dashboard.router)
 app.include_router(attendance.router)
 app.include_router(grades.router)
 app.include_router(staff.router)
+
+
 # ── Health Check ──────────────────────────────────────────────
 @app.get("/health")
 def health_check():
-    """Public endpoint — confirms the API is running."""
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
