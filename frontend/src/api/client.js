@@ -77,4 +77,7 @@ export const getVillages = () =>
 export const getStaff = (params) =>
   api.get('/staff/', { params })
 
+export const enterGrade = (data) =>
+  api.post('/grades/', data)
+
 export default api
