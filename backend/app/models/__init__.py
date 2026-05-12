@@ -6,6 +6,8 @@ from app.models.audit_log import AuditLog
 from app.models.class_group import ClassGroup
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.grade import Grade, Term
+from app.models.activity import Activity, ActivityType, ParticipationLevel, VocationalStatus
+from app.models.meal import Meal, MealType
 
 __all__ = [
     "User", "UserRole",
@@ -16,4 +18,6 @@ __all__ = [
     "ClassGroup",
     "Attendance", "AttendanceStatus",
     "Grade", "Term",
+    "Activity", "ActivityType", "ParticipationLevel", "VocationalStatus",
+    "Meal", "MealType",
 ]

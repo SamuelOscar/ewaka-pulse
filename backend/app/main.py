@@ -47,7 +47,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────
-from app.routers import auth, children, villages, dashboard, attendance, grades, staff
+from app.routers import auth, children, villages, dashboard, attendance, grades, staff, activities, meals
 
 app.include_router(auth.router)
 app.include_router(children.router)
@@ -56,6 +56,8 @@ app.include_router(dashboard.router)
 app.include_router(attendance.router)
 app.include_router(grades.router)
 app.include_router(staff.router)
+app.include_router(activities.router)
+app.include_router(meals.router)
 
 
 # ── Health Check ──────────────────────────────────────────────
