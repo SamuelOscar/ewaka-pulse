@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getChild, getChildAttendance, getChildGrades } from '../api/client'
+import { getChild, getChildAttendance, getChildGrades, getChildActivities } from '../api/client'
 import Layout from '../components/Layout'
-import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle, Activity } from 'lucide-react'
 
 const statusColours = {
-  active:      'bg-green-100 text-green-700',
-  alumni:      'bg-blue-100 text-blue-700',
+  active: 'bg-green-100 text-green-700',
+  alumni: 'bg-blue-100 text-blue-700',
   transferred: 'bg-yellow-100 text-yellow-700',
-  withdrawn:   'bg-red-100 text-red-700',
+  withdrawn: 'bg-red-100 text-red-700',
 }
 
 const attendanceIcons = {
   present: <CheckCircle size={14} className="text-green-500" />,
-  absent:  <XCircle size={14} className="text-red-500" />,
-  late:    <Clock size={14} className="text-yellow-500" />,
+  absent: <XCircle size={14} className="text-red-500" />,
+  late: <Clock size={14} className="text-yellow-500" />,
   excused: <AlertCircle size={14} className="text-blue-500" />,
 }
 
@@ -37,20 +37,23 @@ export default function ChildDetail() {
   const [child, setChild] = useState(null)
   const [attendance, setAttendance] = useState(null)
   const [grades, setGrades] = useState(null)
+  const [activities, setActivities] = useState(null)
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const [childRes, attendanceRes, gradesRes] = await Promise.all([
+        const [childRes, attendanceRes, gradesRes, activitiesRes] = await Promise.all([
           getChild(id),
           getChildAttendance(id),
           getChildGrades(id),
+          getChildActivities(id),
         ])
         setChild(childRes.data)
         setAttendance(attendanceRes.data)
         setGrades(gradesRes.data)
+        setActivities(activitiesRes.data)
       } catch {
         navigate('/children')
       } finally {
@@ -92,7 +95,7 @@ export default function ChildDetail() {
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-xl font-bold text-gray-900">{child.full_name}</h1>
-                <span className="font-mono text-xs bg-ewaka-dark text-white px-2 py-1 rounded">
+                <span className="font-mono text-xs bg-gray-800 text-white px-2 py-1 rounded">
                   {child.child_code}
                 </span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${statusColours[child.status]}`}>
@@ -119,22 +122,22 @@ export default function ChildDetail() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
           {[
             { key: 'profile', label: 'Profile', icon: User },
             { key: 'attendance', label: 'Attendance', icon: CheckCircle },
             { key: 'grades', label: 'Grades', icon: BookOpen },
+            { key: 'activities', label: 'Activities', icon: Activity },
           ].map(tab => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.key
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.key
                     ? 'bg-white text-brand-700 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
-                }`}
+                  }`}
               >
                 <Icon size={14} />
                 {tab.label}
@@ -143,7 +146,7 @@ export default function ChildDetail() {
           })}
         </div>
 
-        {/* Tab Content */}
+        {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -157,7 +160,6 @@ export default function ChildDetail() {
               <InfoRow label="Class / Grade" value={child.class_grade} />
               <InfoRow label="Date of Arrival" value={child.date_of_arrival} />
             </div>
-
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <Home size={15} className="text-brand-600" />
@@ -171,6 +173,7 @@ export default function ChildDetail() {
           </div>
         )}
 
+        {/* Attendance Tab */}
         {activeTab === 'attendance' && attendance && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-6 py-4 border-b border-gray-100">
@@ -213,6 +216,7 @@ export default function ChildDetail() {
           </div>
         )}
 
+        {/* Grades Tab */}
         {activeTab === 'grades' && grades && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             {grades.grades?.length > 0 ? (
@@ -242,6 +246,65 @@ export default function ChildDetail() {
                 No grades recorded yet
               </div>
             )}
+          </div>
+        )}
+
+        {/* Activities Tab */}
+        {activeTab === 'activities' && activities && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900">{activities.total_activities}</p>
+                  <p className="text-xs text-gray-500">Total Activities</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-brand-600">{activities.sports_and_arts}</p>
+                  <p className="text-xs text-gray-500">Sports & Arts</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{activities.vocational}</p>
+                  <p className="text-xs text-gray-500">Vocational</p>
+                </div>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {activities.activities?.length > 0 ? (
+                activities.activities.map((a, i) => (
+                  <div key={i} className="px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm capitalize">
+                        {a.activity_type.replace(/_/g, ' ')}
+                        {a.activity_name && ` — ${a.activity_name}`}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{a.activity_date}</p>
+                      {a.instructor_notes && (
+                        <p className="text-xs text-gray-500 italic mt-1">{a.instructor_notes}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${a.participation_level === 'leader'
+                          ? 'bg-purple-100 text-purple-700'
+                          : a.participation_level === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                        {a.participation_level}
+                      </span>
+                      {a.vocational_status && (
+                        <p className="text-xs text-gray-400 mt-1 capitalize">
+                          {a.vocational_status.replace(/_/g, ' ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-6 py-8 text-center text-gray-400 text-sm">
+                  No activities recorded yet
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

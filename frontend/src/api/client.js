@@ -80,4 +80,22 @@ export const getStaff = (params) =>
 export const enterGrade = (data) =>
   api.post('/grades/', data)
 
+export const getChildActivities = (childId, params) =>
+  api.get(`/activities/child/${childId}`, { params })
+
+export const logActivity = (data) =>
+  api.post('/activities/', data)
+
+export const logMeals = (data) =>
+  api.post('/meals/', data)
+
+export const getChildMeals = (childId, params) =>
+  api.get(`/meals/child/${childId}`, { params })
+
+export const getMealSummary = (date) =>
+  api.get('/meals/summary', { params: date ? { summary_date: date } : {} })
+
+export const getUpcomingBirthdays = () =>
+  api.get('/dashboard/birthdays')
+
 export default api
