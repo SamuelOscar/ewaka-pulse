@@ -148,3 +148,49 @@ def create_user(
         "role": new_user.role.value,
         "message": "User created successfully",
     }
+
+
+@router.get("/users")
+def list_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.admin])),
+):
+    """List all users. Admin only."""
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "role": u.role.value,
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat(),
+            "last_login": u.last_login.isoformat() if u.last_login else None,
+        }
+        for u in users
+    ]
+
+
+@router.patch("/users/{user_id}")
+def update_user(
+    user_id: str,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles([UserRole.admin])),
+):
+    """Deactivate or reactivate a user. Admin only."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=422, detail="Cannot modify your own account")
+
+    if "is_active" in body:
+        user.is_active = body["is_active"]
+
+    db.commit()
+    return {
+        "id": user.id,
+        "username": user.username,
+        "role": user.role.value,
+        "is_active": user.is_active,
+    }
