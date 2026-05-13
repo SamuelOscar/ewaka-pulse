@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getClasses, getClassAttendance, markAttendance, getChildren } from '../api/client'
+import { getClasses, getClassAttendance, markAttendance, getChildren, getClassStudents } from '../api/client'
 import Layout from '../components/Layout'
 import { CheckCircle, XCircle, Clock, AlertCircle, Save } from 'lucide-react'
 
@@ -17,6 +17,7 @@ function today() {
 export default function Attendance() {
   const [classes, setClasses] = useState([])
   const [allChildren, setAllChildren] = useState([])
+  const [classStudents, setClassStudents] = useState([])
   const [selectedClass, setSelectedClass] = useState('')
   const [selectedDate, setSelectedDate] = useState(today())
   const [records, setRecords] = useState({})
@@ -33,17 +34,24 @@ export default function Attendance() {
         setAllChildren(childRes.data)
         if (classRes.data.length > 0) setSelectedClass(classRes.data[0].id)
       })
-      .catch(() => { })
+      .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!selectedClass) return
+    getClassStudents(selectedClass)
+      .then(res => setClassStudents(res.data.students || []))
+      .catch(() => setClassStudents([]))
+  }, [selectedClass])
 
   // Load existing attendance when class or date changes
   useEffect(() => {
     if (!selectedClass || !selectedDate) return
-    // Fix: Avoid calling setLoading(true) synchronously in effect; use a microtask to defer state update
-    Promise.resolve().then(() => setLoading(true))
-    Promise.resolve().then(() => setSuccess(''))
-    Promise.resolve().then(() => setError(''))
-    
+    queueMicrotask(() => {
+      setLoading(true)
+      setSuccess('')
+      setError('')
+    })
 
     getClassAttendance(selectedClass, selectedDate)
       .then(res => {
@@ -65,7 +73,8 @@ export default function Attendance() {
 
   const handleMarkAll = (status) => {
     const map = {}
-    allChildren.forEach(c => { map[c.id] = status })
+    const list = classStudents.length > 0 ? classStudents : allChildren
+    list.forEach(c => { map[c.id] = status })
     setRecords(map)
   }
 
@@ -99,11 +108,22 @@ export default function Attendance() {
   }
 
   const selectedClassName = classes.find(c => c.id === selectedClass)?.name || ''
+  const displayChildren = classStudents.length > 0 ? classStudents : allChildren
   const markedCount = Object.keys(records).length
 
   return (
     <Layout>
       <div className="p-8">
+        {/* Print header */}
+        <div className="print-header">
+          <h1 style={{ fontSize: '18pt', fontWeight: 'bold', marginBottom: '4pt' }}>
+            Africa Ewaka Village — Testimony Africa NGO
+          </h1>
+          <h2 style={{ fontSize: '14pt', marginBottom: '4pt' }}>
+            Attendance Register — {selectedClassName}
+          </h2>
+          <p style={{ fontSize: '10pt' }}>Date: {selectedDate}</p>
+        </div>
 
         {/* Header */}
         <div className="mb-6">
@@ -156,7 +176,7 @@ export default function Attendance() {
             <div>
               <h2 className="font-semibold text-gray-800">{selectedClassName}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                {markedCount} of {allChildren.length} marked · {selectedDate}
+                {markedCount} of {classStudents.length > 0 ? classStudents.length : allChildren.length} marked · {selectedDate}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -181,18 +201,25 @@ export default function Attendance() {
                 <Save size={14} />
                 {saving ? 'Saving...' : 'Save Attendance'}
               </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="no-print flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                🖨️ Print Sheet
+              </button>
             </div>
           </div>
 
           {loading ? (
             <div className="py-12 text-center text-gray-400 text-sm">Loading...</div>
-          ) : allChildren.length === 0 ? (
+          ) : displayChildren.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm">
               No children registered yet.
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {allChildren.map(child => (
+              {(classStudents.length > 0 ? classStudents : allChildren).map(child => (
                 <div key={child.id} className="px-6 py-4">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-3">
@@ -230,7 +257,7 @@ export default function Attendance() {
           )}
 
           {/* Summary footer */}
-          {allChildren.length > 0 && (
+          {displayChildren.length > 0 && (
             <div className="px-6 py-3 border-t border-gray-50 flex gap-4 text-xs text-gray-400">
               {STATUS_OPTIONS.map(opt => {
                 const Icon = opt.icon

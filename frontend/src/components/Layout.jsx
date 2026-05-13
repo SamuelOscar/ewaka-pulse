@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Baby, ClipboardCheck,
-  GraduationCap, Users, LogOut, Menu, X,
+  GraduationCap, Users, LogOut, Menu, X, Shield,
 } from 'lucide-react'
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { path: '/attendance', label: 'Attendance', icon: ClipboardCheck, roles: ['admin', 'teacher', 'manager'] },
   { path: '/grades', label: 'Grades', icon: GraduationCap, roles: ['admin', 'teacher', 'manager'] },
   { path: '/staff', label: 'Staff', icon: Users, roles: ['admin', 'manager'] },
+  { path: '/users', label: 'Users', icon: Shield, roles: ['admin'] },
 ]
 
 export default function Layout({ children }) {

@@ -9,6 +9,7 @@ import ChildNew from './pages/ChildNew'
 import Attendance from './pages/Attendance'
 import Staff from './pages/Staff'
 import Grades from './pages/Grades'
+import UserManagement from './pages/UserManagement'
 
 export default function App() {
   return (
@@ -23,6 +24,14 @@ export default function App() {
           <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
           <Route path="/grades" element={<ProtectedRoute><Grades /></ProtectedRoute>} />
           <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

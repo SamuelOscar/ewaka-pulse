@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getChild, getChildAttendance, getChildGrades, getChildActivities } from '../api/client'
+import { getChild, getChildAttendance, getChildGrades, getChildActivities, getChildBiometrics } from '../api/client'
 import Layout from '../components/Layout'
-import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle, Activity } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle, Activity, Heart, Shield } from 'lucide-react'
 
 const statusColours = {
   active: 'bg-green-100 text-green-700',
@@ -40,20 +41,38 @@ export default function ChildDetail() {
   const [activities, setActivities] = useState(null)
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
+  const { hasRole } = useAuth()
+  const [biometrics, setBiometrics] = useState(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const [childRes, attendanceRes, gradesRes, activitiesRes] = await Promise.all([
+        const promises = [
           getChild(id),
           getChildAttendance(id),
           getChildGrades(id),
           getChildActivities(id),
-        ])
+        ]
+
+        const [childRes, attendanceRes, gradesRes, activitiesRes] = await Promise.all(promises)
         setChild(childRes.data)
         setAttendance(attendanceRes.data)
         setGrades(gradesRes.data)
         setActivities(activitiesRes.data)
+
+        // Load biometrics only for admin/counselor
+        const userData = localStorage.getItem('ewaka_user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          if (['admin', 'counselor'].includes(user.role)) {
+            const bioRes = await getChildBiometrics(id)
+            setBiometrics(bioRes.data)
+          } else {
+            setBiometrics(null)
+          }
+        } else {
+          setBiometrics(null)
+        }
       } catch {
         navigate('/children')
       } finally {
@@ -128,6 +147,7 @@ export default function ChildDetail() {
             { key: 'attendance', label: 'Attendance', icon: CheckCircle },
             { key: 'grades', label: 'Grades', icon: BookOpen },
             { key: 'activities', label: 'Activities', icon: Activity },
+            ...(hasRole('admin', 'counselor') ? [{ key: 'health', label: 'Health', icon: Heart }] : []),
           ].map(tab => {
             const Icon = tab.icon
             return (
@@ -305,6 +325,69 @@ export default function ChildDetail() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'health' && hasRole('admin', 'counselor') && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+              <Shield size={15} className="text-red-500" />
+              <h3 className="font-semibold text-gray-800">Health Records</h3>
+              <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full ml-auto">
+                SENSITIVE
+              </span>
+            </div>
+            {!biometrics || biometrics.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">
+                No health records yet
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {biometrics.map((r, i) => (
+                  <div key={i} className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium text-gray-900 text-sm">{r.record_date}</p>
+                      {r.next_checkup_date && (
+                        <p className="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                          Next checkup: {r.next_checkup_date}
+                        </p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                      {r.height_cm && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-gray-900">{r.height_cm}</p>
+                          <p className="text-xs text-gray-500">Height (cm)</p>
+                        </div>
+                      )}
+                      {r.weight_kg && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-gray-900">{r.weight_kg}</p>
+                          <p className="text-xs text-gray-500">Weight (kg)</p>
+                        </div>
+                      )}
+                      {r.blood_type && (
+                        <div className="bg-red-50 rounded-lg p-3 text-center">
+                          <p className="text-lg font-bold text-red-700">{r.blood_type}</p>
+                          <p className="text-xs text-gray-500">Blood Type</p>
+                        </div>
+                      )}
+                      {r.allergies && (
+                        <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                          <p className="text-sm font-medium text-yellow-800">{r.allergies}</p>
+                          <p className="text-xs text-gray-500">Allergies</p>
+                        </div>
+                      )}
+                    </div>
+                    {r.health_notes && (
+                      <p className="text-sm text-gray-600 mt-3 bg-gray-50 rounded-lg p-3 italic">
+                        {r.health_notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

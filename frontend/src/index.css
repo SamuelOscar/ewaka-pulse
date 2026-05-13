@@ -12,3 +12,78 @@ body {
   background-color: #f8fafc;
   color: #1e293b;
 }
+
+/* ── Print Styles ─────────────────────────────────────── */
+@media print {
+
+  /* Hide everything that shouldn't print */
+  aside,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset margins for print */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20pt;
+    padding-bottom: 10pt;
+    border-bottom: 2pt solid black;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Tables print cleanly */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    border: 1pt solid #ccc;
+    padding: 6pt 8pt;
+    text-align: left;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Hide sensitive badges in print */
+  .sensitive-badge {
+    display: none !important;
+  }
+}
+
+/* Hidden in screen, shown in print */
+.print-only {
+  display: none;
+}
+
+.print-header {
+  display: none;
+}

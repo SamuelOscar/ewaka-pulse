@@ -98,4 +98,33 @@ export const getMealSummary = (date) =>
 export const getUpcomingBirthdays = () =>
   api.get('/dashboard/birthdays')
 
+export const getChildBiometrics = (childId) =>
+  api.get(`/biometrics/child/${childId}`)
+
+export const createBiometricRecord = (data) =>
+  api.post('/biometrics/', data)
+
+// Classes
+export const listClasses = () =>
+  api.get('/classes/')
+
+export const createClass = (data) =>
+  api.post('/classes/', data)
+
+export const getClassStudents = (classId) =>
+  api.get(`/classes/${classId}/students`)
+
+export const enrollChild = (classId, childId) =>
+  api.post(`/classes/${classId}/enroll`, { child_id: childId })
+
+// Users (admin)
+export const listUsers = () =>
+  api.get('/auth/users')
+
+export const createUser = (data) =>
+  api.post('/auth/users', data)
+
+export const updateUser = (userId, data) =>
+  api.patch(`/auth/users/${userId}`, data)
+
 export default api
