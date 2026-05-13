@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, date
-from sqlalchemy import String, Date, DateTime, Enum as SAEnum, ForeignKey
+from sqlalchemy import String, Date, DateTime, Enum as SAEnum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -43,6 +43,8 @@ class Child(Base):
     )
     guardian_name: Mapped[str] = mapped_column(String(200), nullable=True)
     guardian_contact: Mapped[str] = mapped_column(String(50), nullable=True)
+    # SENSITIVE - Admin and Counselor only (FR-2.2)
+    origin_story: Mapped[str] = mapped_column(Text, nullable=True)
     created_by: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False
     )

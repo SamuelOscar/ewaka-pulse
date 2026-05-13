@@ -58,6 +58,7 @@ class ChildUpdateRequest(BaseModel):
     guardian_contact: Optional[str] = None
     nationality: Optional[str] = None
     status: Optional[ChildStatus] = None
+    origin_story: Optional[str] = None  # SENSITIVE - Admin + Counselor only
 
 
 # ── Response Schemas ──────────────────────────────────────────
@@ -100,6 +101,7 @@ class ChildDetailResponse(BaseModel):
     status: str
     guardian_name: Optional[str]
     guardian_contact: Optional[str]
+    origin_story: Optional[str] = None  # Only populated for admin + counselor
     created_at: str
     updated_at: str
 

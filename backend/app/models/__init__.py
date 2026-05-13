@@ -8,6 +8,8 @@ from app.models.attendance import Attendance, AttendanceStatus
 from app.models.grade import Grade, Term
 from app.models.activity import Activity, ActivityType, ParticipationLevel, VocationalStatus
 from app.models.meal import Meal, MealType
+from app.models.biometric import BiometricRecord
+from app.models.mental_health import MentalHealthLog, SessionType, WellbeingRating
 
 __all__ = [
     "User", "UserRole",
@@ -20,4 +22,6 @@ __all__ = [
     "Grade", "Term",
     "Activity", "ActivityType", "ParticipationLevel", "VocationalStatus",
     "Meal", "MealType",
+    "BiometricRecord",
+    "MentalHealthLog", "SessionType", "WellbeingRating",
 ]
