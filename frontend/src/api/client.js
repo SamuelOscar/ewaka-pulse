@@ -107,6 +107,12 @@ export const getChildBiometrics = (childId) =>
 export const createBiometricRecord = (data) =>
   api.post('/biometrics/', data)
 
+export const logMentalHealthSession = (data) =>
+  api.post('/mental-health/', data)
+
+export const getChildMentalHealth = (childId) =>
+  api.get(`/mental-health/child/${childId}`)
+
 // Classes
 export const listClasses = () =>
   api.get('/classes/')

@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getChild, getChildAttendance, getChildGrades, getChildActivities, getChildBiometrics, updateChild, updateGrade } from '../api/client'
+import {
+  getChild,
+  getChildAttendance,
+  getChildGrades,
+  getChildActivities,
+  getChildBiometrics,
+  updateChild,
+  updateGrade,
+  logActivity,
+  createBiometricRecord,
+  logMentalHealthSession,
+  getChildMentalHealth,
+} from '../api/client'
 import Layout from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle, Activity, Heart, Shield } from 'lucide-react'
@@ -49,6 +61,71 @@ export default function ChildDetail() {
   const [editSuccess, setEditSuccess] = useState('')
   const [editingGrade, setEditingGrade] = useState(null)
   const [gradeEditForm, setGradeEditForm] = useState({})
+  const [showActivityForm, setShowActivityForm] = useState(false)
+  const [activityForm, setActivityForm] = useState({
+    activity_type: 'football',
+    activity_date: new Date().toISOString().split('T')[0],
+    participation_level: 'active',
+    instructor_notes: '',
+    vocational_status: '',
+  })
+  const [activityError, setActivityError] = useState('')
+  const [activitySuccess, setActivitySuccess] = useState('')
+  const [showHealthForm, setShowHealthForm] = useState(false)
+  const [healthForm, setHealthForm] = useState({
+    record_date: new Date().toISOString().split('T')[0],
+    height_cm: '',
+    weight_kg: '',
+    blood_type: '',
+    allergies: '',
+    health_notes: '',
+    next_checkup_date: '',
+  })
+  const [healthError, setHealthError] = useState('')
+  const [showMHForm, setShowMHForm] = useState(false)
+  const [mhForm, setMhForm] = useState({
+    session_date: new Date().toISOString().split('T')[0],
+    session_type: 'individual',
+    wellbeing_rating: '3',
+    session_notes: '',
+    trauma_milestone: '',
+    action_items: '',
+    next_session_date: '',
+  })
+  const [mhError, setMhError] = useState('')
+  const [mhSuccess, setMhSuccess] = useState('')
+  const [mentalHealth, setMentalHealth] = useState(null)
+
+  const handleHealthSubmit = async (e) => {
+    e.preventDefault()
+    setHealthError('')
+    try {
+      await createBiometricRecord({
+        child_id: id,
+        record_date: healthForm.record_date,
+        height_cm: healthForm.height_cm ? parseFloat(healthForm.height_cm) : null,
+        weight_kg: healthForm.weight_kg ? parseFloat(healthForm.weight_kg) : null,
+        blood_type: healthForm.blood_type || null,
+        allergies: healthForm.allergies || null,
+        health_notes: healthForm.health_notes || null,
+        next_checkup_date: healthForm.next_checkup_date || null,
+      })
+      setShowHealthForm(false)
+      setHealthForm({
+        record_date: new Date().toISOString().split('T')[0],
+        height_cm: '',
+        weight_kg: '',
+        blood_type: '',
+        allergies: '',
+        health_notes: '',
+        next_checkup_date: '',
+      })
+      const res = await getChildBiometrics(id)
+      setBiometrics(res.data)
+    } catch (err) {
+      setHealthError(err.response?.data?.detail || 'Failed to save health record.')
+    }
+  }
 
   const handleProfileSave = async () => {
     setEditError('')
@@ -75,6 +152,34 @@ export default function ChildDetail() {
     }
   }
 
+  const handleActivitySubmit = async (e) => {
+    e.preventDefault()
+    setActivityError('')
+    try {
+      await logActivity({
+        child_id: id,
+        activity_type: activityForm.activity_type,
+        activity_date: activityForm.activity_date,
+        participation_level: activityForm.participation_level,
+        instructor_notes: activityForm.instructor_notes || null,
+        vocational_status: activityForm.vocational_status || null,
+      })
+      setActivitySuccess('✅ Activity logged successfully')
+      setShowActivityForm(false)
+      setActivityForm({
+        activity_type: 'football',
+        activity_date: new Date().toISOString().split('T')[0],
+        participation_level: 'active',
+        instructor_notes: '',
+        vocational_status: '',
+      })
+      const res = await getChildActivities(id)
+      setActivities(res.data)
+    } catch (err) {
+      setActivityError(err.response?.data?.detail || 'Failed to log activity.')
+    }
+  }
+
   useEffect(() => {
     async function load() {
       try {
@@ -91,18 +196,24 @@ export default function ChildDetail() {
         setGrades(gradesRes.data)
         setActivities(activitiesRes.data)
 
-        // Load biometrics only for admin/counselor
+        // Load biometrics and mental health only for admin/counselor
         const userData = localStorage.getItem('ewaka_user')
         if (userData) {
           const user = JSON.parse(userData)
           if (['admin', 'counselor'].includes(user.role)) {
-            const bioRes = await getChildBiometrics(id)
+            const [bioRes, mhRes] = await Promise.all([
+              getChildBiometrics(id),
+              getChildMentalHealth(id),
+            ])
             setBiometrics(bioRes.data)
+            setMentalHealth(mhRes.data)
           } else {
             setBiometrics(null)
+            setMentalHealth(null)
           }
         } else {
           setBiometrics(null)
+          setMentalHealth(null)
         }
       } catch {
         navigate('/children')
@@ -342,7 +453,10 @@ export default function ChildDetail() {
             { key: 'attendance', label: 'Attendance', icon: CheckCircle },
             { key: 'grades', label: 'Grades', icon: BookOpen },
             { key: 'activities', label: 'Activities', icon: Activity },
-            ...(hasRole('admin', 'counselor') ? [{ key: 'health', label: 'Health', icon: Heart }] : []),
+            ...(hasRole('admin', 'counselor') ? [
+              { key: 'health', label: 'Health', icon: Heart },
+              { key: 'counseling', label: 'Counseling', icon: Shield },
+            ] : []),
           ].map(tab => {
             const Icon = tab.icon
             return (
@@ -643,11 +757,11 @@ export default function ChildDetail() {
         {/* Activities Tab */}
         {activeTab === 'activities' && activities && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-6">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900">{activities.total_activities}</p>
-                  <p className="text-xs text-gray-500">Total Activities</p>
+                  <p className="text-xs text-gray-500">Total</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-brand-600">{activities.sports_and_arts}</p>
@@ -658,7 +772,107 @@ export default function ChildDetail() {
                   <p className="text-xs text-gray-500">Vocational</p>
                 </div>
               </div>
+              {hasRole('admin', 'teacher') && (
+                <button
+                  type="button"
+                  onClick={() => { setShowActivityForm(true); setActivityError(''); setActivitySuccess('') }}
+                  className="no-print flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  + Log Activity
+                </button>
+              )}
             </div>
+
+            {showActivityForm && (
+              <div className="px-6 py-4 border-b border-brand-100 bg-brand-50">
+                <h4 className="font-semibold text-gray-800 mb-3 text-sm">Log New Activity</h4>
+                {activityError && (
+                  <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded mb-3">{activityError}</p>
+                )}
+                <form onSubmit={handleActivitySubmit} className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Activity Type</label>
+                    <select
+                      value={activityForm.activity_type}
+                      onChange={e => setActivityForm(p => ({ ...p, activity_type: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="football">Football</option>
+                      <option value="dance">Dance</option>
+                      <option value="choir">Choir</option>
+                      <option value="drama">Drama</option>
+                      <option value="basketball">Basketball</option>
+                      <option value="volleyball">Volleyball</option>
+                      <option value="athletics">Athletics</option>
+                      <option value="vocational_tailoring">Vocational — Tailoring</option>
+                      <option value="vocational_carpentry">Vocational — Carpentry</option>
+                      <option value="vocational_cooking">Vocational — Cooking</option>
+                      <option value="vocational_computing">Vocational — Computing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={activityForm.activity_date}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={e => setActivityForm(p => ({ ...p, activity_date: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Participation Level</label>
+                    <select
+                      value={activityForm.participation_level}
+                      onChange={e => setActivityForm(p => ({ ...p, participation_level: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="observer">Observer</option>
+                      <option value="active">Active</option>
+                      <option value="leader">Leader</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Vocational Status (if applicable)</label>
+                    <select
+                      value={activityForm.vocational_status}
+                      onChange={e => setActivityForm(p => ({ ...p, vocational_status: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">— Not vocational —</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="certified">Certified</option>
+                      <option value="did_not_complete">Did Not Complete</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Instructor Notes (optional)</label>
+                    <input
+                      value={activityForm.instructor_notes}
+                      onChange={e => setActivityForm(p => ({ ...p, instructor_notes: e.target.value }))}
+                      placeholder="e.g. Strong team player, improving each week"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div className="col-span-2 flex gap-2">
+                    <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                      Save Activity
+                    </button>
+                    <button type="button" onClick={() => setShowActivityForm(false)} className="text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {activitySuccess && (
+              <div className="px-6 py-3 text-sm text-green-700 bg-green-50 border-b border-green-100">
+                {activitySuccess}
+              </div>
+            )}
+
             <div className="divide-y divide-gray-50">
               {activities.activities?.length > 0 ? (
                 activities.activities.map((a, i) => (
@@ -674,12 +888,11 @@ export default function ChildDetail() {
                       )}
                     </div>
                     <div className="text-right">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${a.participation_level === 'leader'
-                          ? 'bg-purple-100 text-purple-700'
-                          : a.participation_level === 'active'
-                            ? 'bg-green-100 text-green-700'
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${
+                        a.participation_level === 'leader' ? 'bg-purple-100 text-purple-700'
+                          : a.participation_level === 'active' ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-600'
-                        }`}>
+                      }`}>
                         {a.participation_level}
                       </span>
                       {a.vocational_status && (
@@ -701,17 +914,120 @@ export default function ChildDetail() {
 
         {activeTab === 'health' && hasRole('admin', 'counselor') && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-              <Shield size={15} className="text-red-500" />
-              <h3 className="font-semibold text-gray-800">Health Records</h3>
-              <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full ml-auto">
-                SENSITIVE
-              </span>
-            </div>
-            {!biometrics || biometrics.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-400 text-sm">
-                No health records yet
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield size={15} className="text-red-500" />
+                <h3 className="font-semibold text-gray-800">Health Records</h3>
+                <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full ml-2">SENSITIVE</span>
               </div>
+              {hasRole('admin', 'counselor') && (
+                <button
+                  onClick={() => setShowHealthForm(true)}
+                  className="no-print flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  + Add Health Record
+                </button>
+              )}
+            </div>
+
+            {/* Health form */}
+            {showHealthForm && (
+              <div className="px-6 py-4 border-b border-brand-100 bg-brand-50">
+                <h4 className="font-semibold text-gray-800 mb-3 text-sm">New Health Record</h4>
+                {healthError && (
+                  <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded mb-3">{healthError}</p>
+                )}
+                <form onSubmit={handleHealthSubmit} className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Record Date</label>
+                    <input
+                      type="date"
+                      value={healthForm.record_date}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={e => setHealthForm(p => ({...p, record_date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm)</label>
+                    <input
+                      type="number"
+                      value={healthForm.height_cm}
+                      onChange={e => setHealthForm(p => ({...p, height_cm: e.target.value}))}
+                      placeholder="e.g. 142"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={healthForm.weight_kg}
+                      onChange={e => setHealthForm(p => ({...p, weight_kg: e.target.value}))}
+                      placeholder="e.g. 32"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Blood Type</label>
+                    <select
+                      value={healthForm.blood_type}
+                      onChange={e => setHealthForm(p => ({...p, blood_type: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="">Unknown</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Allergies</label>
+                    <input
+                      value={healthForm.allergies}
+                      onChange={e => setHealthForm(p => ({...p, allergies: e.target.value}))}
+                      placeholder="e.g. None known"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Next Checkup Date</label>
+                    <input
+                      type="date"
+                      value={healthForm.next_checkup_date}
+                      onChange={e => setHealthForm(p => ({...p, next_checkup_date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Health Notes</label>
+                    <textarea
+                      value={healthForm.health_notes}
+                      onChange={e => setHealthForm(p => ({...p, health_notes: e.target.value}))}
+                      placeholder="e.g. Vaccination up to date. No known conditions."
+                      rows={2}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div className="col-span-2 flex gap-2">
+                    <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                      Save Record
+                    </button>
+                    <button type="button" onClick={() => setShowHealthForm(false)} className="text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {!biometrics || biometrics.length === 0 ? (
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">No health records yet</div>
             ) : (
               <div className="divide-y divide-gray-50">
                 {biometrics.map((r, i) => (
@@ -751,14 +1067,167 @@ export default function ChildDetail() {
                       )}
                     </div>
                     {r.health_notes && (
-                      <p className="text-sm text-gray-600 mt-3 bg-gray-50 rounded-lg p-3 italic">
-                        {r.health_notes}
-                      </p>
+                      <p className="text-sm text-gray-600 mt-3 bg-gray-50 rounded-lg p-3 italic">{r.health_notes}</p>
                     )}
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'counseling' && hasRole('admin', 'counselor') && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield size={15} className="text-purple-600" />
+                <h3 className="font-semibold text-gray-800">Counseling Sessions</h3>
+                <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full ml-2">SENSITIVE</span>
+              </div>
+              <button
+                onClick={() => { setShowMHForm(true); setMhError(''); setMhSuccess('') }}
+                className="no-print flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                + Log Session
+              </button>
+            </div>
+
+            {showMHForm && (
+              <div className="px-6 py-4 border-b border-purple-100 bg-purple-50">
+                <h4 className="font-semibold text-gray-800 mb-3 text-sm">New Counseling Session</h4>
+                {mhError && (
+                  <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded mb-3">{mhError}</p>
+                )}
+                <form onSubmit={async (e) => {
+                  e.preventDefault()
+                  setMhError('')
+                  try {
+                    await logMentalHealthSession({
+                      child_id: id,
+                      session_date: mhForm.session_date,
+                      session_type: mhForm.session_type,
+                      wellbeing_rating: parseInt(mhForm.wellbeing_rating),
+                      session_notes: mhForm.session_notes || null,
+                      trauma_milestone: mhForm.trauma_milestone || null,
+                      action_items: mhForm.action_items || null,
+                      next_session_date: mhForm.next_session_date || null,
+                    })
+                    setMhSuccess('✅ Session logged')
+                    setShowMHForm(false)
+                    const res = await getChildMentalHealth(id)
+                    setMentalHealth(res.data)
+                  } catch (err) {
+                    setMhError(err.response?.data?.detail || 'Failed to log session.')
+                  }
+                }} className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Session Date</label>
+                    <input type="date" value={mhForm.session_date}
+                      max={new Date().toISOString().split('T')[0]}
+                      onChange={e => setMhForm(p => ({...p, session_date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Session Type</label>
+                    <select value={mhForm.session_type}
+                      onChange={e => setMhForm(p => ({...p, session_type: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="individual">Individual</option>
+                      <option value="group">Group</option>
+                      <option value="emergency">Emergency</option>
+                      <option value="follow_up">Follow-up</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Wellbeing Rating (1-5)</label>
+                    <select value={mhForm.wellbeing_rating}
+                      onChange={e => setMhForm(p => ({...p, wellbeing_rating: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="1">1 — Very Low</option>
+                      <option value="2">2 — Low</option>
+                      <option value="3">3 — Moderate</option>
+                      <option value="4">4 — Good</option>
+                      <option value="5">5 — Excellent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Next Session Date</label>
+                    <input type="date" value={mhForm.next_session_date}
+                      onChange={e => setMhForm(p => ({...p, next_session_date: e.target.value}))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Session Notes</label>
+                    <textarea value={mhForm.session_notes}
+                      onChange={e => setMhForm(p => ({...p, session_notes: e.target.value}))}
+                      rows={2} placeholder="Session observations and notes..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Trauma Milestone</label>
+                    <input value={mhForm.trauma_milestone}
+                      onChange={e => setMhForm(p => ({...p, trauma_milestone: e.target.value}))}
+                      placeholder="e.g. Beginning to show trust in adult relationships"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Action Items</label>
+                    <input value={mhForm.action_items}
+                      onChange={e => setMhForm(p => ({...p, action_items: e.target.value}))}
+                      placeholder="e.g. Weekly check-ins, coordinate with class teacher"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="col-span-2 flex gap-2">
+                    <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                      Save Session
+                    </button>
+                    <button type="button" onClick={() => setShowMHForm(false)} className="text-gray-500 border border-gray-200 px-4 py-2 rounded-lg text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {mhSuccess && (
+              <div className="px-6 py-3 text-sm text-green-700 bg-green-50">{mhSuccess}</div>
+            )}
+
+            <div className="divide-y divide-gray-50">
+              {!mentalHealth || mentalHealth.length === 0 ? (
+                <div className="px-6 py-8 text-center text-gray-400 text-sm">No counseling sessions recorded yet</div>
+              ) : (
+                mentalHealth.map((s, i) => (
+                  <div key={i} className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm capitalize">{s.session_type.replace('_', ' ')} session</p>
+                        <p className="text-xs text-gray-400">{s.session_date}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1">
+                          {[1,2,3,4,5].map(n => (
+                            <div key={n} className={`w-3 h-3 rounded-full ${n <= s.wellbeing_rating ? 'bg-purple-500' : 'bg-gray-200'}`} />
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Wellbeing {s.wellbeing_rating}/5</p>
+                      </div>
+                    </div>
+                    {s.session_notes && <p className="text-sm text-gray-600 italic bg-gray-50 rounded p-2 mt-1">{s.session_notes}</p>}
+                    {s.trauma_milestone && <p className="text-xs text-purple-600 mt-1">Milestone: {s.trauma_milestone}</p>}
+                    {s.action_items && <p className="text-xs text-gray-500 mt-1">Actions: {s.action_items}</p>}
+                    {s.next_session_date && <p className="text-xs text-orange-600 mt-1">Next session: {s.next_session_date}</p>}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
         </div>

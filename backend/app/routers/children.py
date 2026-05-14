@@ -238,7 +238,10 @@ def update_child(
     body: ChildUpdateRequest,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.admin])),
+    current_user: User = Depends(require_roles([
+        UserRole.admin,
+        UserRole.teacher,  # Teachers can update child profile and status
+    ])),
 ):
     """Update child details. Admin only. child_code is never updatable."""
     child = db.query(Child).filter(Child.id == child_id).first()

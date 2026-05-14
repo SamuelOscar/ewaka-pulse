@@ -3,12 +3,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Baby, ClipboardCheck,
-  GraduationCap, Users, LogOut, Menu, X, Shield,
+  GraduationCap, Users, LogOut, Menu, X, Shield, School,
 } from 'lucide-react'
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'teacher', 'counselor', 'operations', 'finance'] },
   { path: '/children', label: 'Children', icon: Baby, roles: ['admin', 'manager', 'teacher', 'counselor'] },
+  { path: '/classes', label: 'Classes', icon: School, roles: ['admin', 'teacher'] },
   { path: '/attendance', label: 'Attendance', icon: ClipboardCheck, roles: ['admin', 'teacher', 'manager'] },
   { path: '/grades', label: 'Grades', icon: GraduationCap, roles: ['admin', 'teacher', 'manager'] },
   { path: '/staff', label: 'Staff', icon: Users, roles: ['admin', 'manager'] },

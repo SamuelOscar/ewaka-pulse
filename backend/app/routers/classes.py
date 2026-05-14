@@ -44,9 +44,12 @@ def list_classes(
 def create_class(
     body: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles([UserRole.admin])),
+    current_user: User = Depends(require_roles([
+        UserRole.admin,
+        UserRole.teacher,  # Teachers can create classes
+    ])),
 ):
-    """Create a new class. Admin only."""
+    """Create a new class. Admin and teacher roles allowed."""
     name = body.get("name", "").strip()
     village_id = body.get("village_id", "").strip()
 
