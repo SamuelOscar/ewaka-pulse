@@ -80,6 +80,9 @@ export const getStaff = (params) =>
 export const enterGrade = (data) =>
   api.post('/grades/', data)
 
+export const updateGrade = (gradeId, data) =>
+  api.patch(`/grades/${gradeId}`, data)
+
 export const getChildActivities = (childId, params) =>
   api.get(`/activities/child/${childId}`, { params })
 

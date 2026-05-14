@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getChild, getChildAttendance, getChildGrades, getChildActivities, getChildBiometrics } from '../api/client'
+import { getChild, getChildAttendance, getChildGrades, getChildActivities, getChildBiometrics, updateChild, updateGrade } from '../api/client'
 import Layout from '../components/Layout'
 import { useAuth } from '../context/AuthContext'
 import { ArrowLeft, User, Home, BookOpen, CheckCircle, XCircle, Clock, AlertCircle, Activity, Heart, Shield } from 'lucide-react'
@@ -43,6 +43,37 @@ export default function ChildDetail() {
   const [loading, setLoading] = useState(true)
   const { hasRole } = useAuth()
   const [biometrics, setBiometrics] = useState(null)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [editForm, setEditForm] = useState({})
+  const [editError, setEditError] = useState('')
+  const [editSuccess, setEditSuccess] = useState('')
+  const [editingGrade, setEditingGrade] = useState(null)
+  const [gradeEditForm, setGradeEditForm] = useState({})
+
+  const handleProfileSave = async () => {
+    setEditError('')
+    setEditSuccess('')
+    try {
+      await updateChild(id, editForm)
+      setEditSuccess('Profile updated successfully')
+      setEditingProfile(false)
+      const res = await getChild(id)
+      setChild(res.data)
+    } catch (err) {
+      setEditError(err.response?.data?.detail || 'Failed to update profile.')
+    }
+  }
+
+  const handleGradeSave = async (gradeId) => {
+    try {
+      await updateGrade(gradeId, gradeEditForm)
+      setEditingGrade(null)
+      const res = await getChildGrades(id)
+      setGrades(res.data)
+    } catch (err) {
+      console.error('Grade update failed', err)
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -95,7 +126,7 @@ export default function ChildDetail() {
   return (
     <Layout>
       <div className="p-8 max-w-4xl">
-
+        <div className="no-print">
         {/* Back button */}
         <button
           onClick={() => navigate('/children')}
@@ -137,9 +168,173 @@ export default function ChildDetail() {
                 </p>
               )}
             </div>
+            {/* Print button */}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="no-print flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0"
+            >
+              🖨️ Print Record
+            </button>
+          </div>
+        </div>
+        </div>
+
+        {/* PRINT ONLY SECTION — full student record */}
+        <div className="print-only" style={{ fontFamily: 'serif' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', borderBottom: '2pt solid black', paddingBottom: '12pt', marginBottom: '16pt' }}>
+            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: '0 0 4pt 0' }}>
+              Africa Ewaka Village
+            </h1>
+            <h2 style={{ fontSize: '13pt', fontWeight: 'normal', margin: '0 0 4pt 0' }}>
+              Testimony Africa NGO — Student Record
+            </h2>
+            <p style={{ fontSize: '10pt', color: '#555', margin: 0 }}>
+              Printed: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+
+          {/* Student identity */}
+          <table style={{ width: '100%', marginBottom: '14pt', borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', width: '30%', background: '#f5f5f5', border: '1pt solid #ccc' }}>Student Name</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.full_name}</td>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', width: '20%', background: '#f5f5f5', border: '1pt solid #ccc' }}>Student Code</td>
+                <td style={{ padding: '4pt 8pt', fontFamily: 'monospace', border: '1pt solid #ccc' }}>{child.child_code}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Date of Birth</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.date_of_birth}</td>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Gender</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', textTransform: 'capitalize' }}>{child.gender}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Nationality</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.nationality || 'Ugandan'}</td>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Status</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', textTransform: 'capitalize' }}>{child.status}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Class / Grade</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.class_grade || '—'}</td>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Date of Arrival</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.date_of_arrival || '—'}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Guardian Name</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.guardian_name || '—'}</td>
+                <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Guardian Contact</td>
+                <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{child.guardian_contact || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Attendance summary */}
+          {attendance && (
+            <>
+              <h3 style={{ fontSize: '12pt', fontWeight: 'bold', borderBottom: '1pt solid black', paddingBottom: '4pt', marginBottom: '8pt' }}>
+                Attendance Summary
+              </h3>
+              <table style={{ width: '100%', marginBottom: '14pt', borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc', width: '25%' }}>Attendance Rate</td>
+                    <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{attendance.attendance_rate}%</td>
+                    <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc', width: '25%' }}>Present</td>
+                    <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{attendance.present}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Absent</td>
+                    <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{attendance.absent}</td>
+                    <td style={{ padding: '4pt 8pt', fontWeight: 'bold', background: '#f5f5f5', border: '1pt solid #ccc' }}>Late</td>
+                    <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{attendance.late}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* Grades */}
+          {grades && grades.grades?.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '12pt', fontWeight: 'bold', borderBottom: '1pt solid black', paddingBottom: '4pt', marginBottom: '8pt' }}>
+                Academic Results
+              </h3>
+              <table style={{ width: '100%', marginBottom: '14pt', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Subject</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Term</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Score</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Percentage</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grades.grades.map((g, i) => (
+                    <tr key={g.id ?? i}>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{g.subject}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', textTransform: 'capitalize' }}>{(g.term || '').replace('_', ' ')}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{g.score}/{g.max_score}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{g.percentage}%</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', fontStyle: 'italic' }}>{g.comments || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* Activities */}
+          {activities && activities.activities?.length > 0 && (
+            <>
+              <h3 style={{ fontSize: '12pt', fontWeight: 'bold', borderBottom: '1pt solid black', paddingBottom: '4pt', marginBottom: '8pt' }}>
+                Activities & Engagement
+              </h3>
+              <table style={{ width: '100%', marginBottom: '14pt', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Activity</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Date</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Level</th>
+                    <th style={{ padding: '5pt 8pt', border: '1pt solid #ccc', textAlign: 'left' }}>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activities.activities.map((a, i) => (
+                    <tr key={a.id ?? i}>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', textTransform: 'capitalize' }}>{(a.activity_type || '').replace(/_/g, ' ')}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc' }}>{a.activity_date}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', textTransform: 'capitalize' }}>{a.participation_level}</td>
+                      <td style={{ padding: '4pt 8pt', border: '1pt solid #ccc', fontStyle: 'italic' }}>{a.instructor_notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* Signature block */}
+          <div style={{ marginTop: '40pt' }}>
+            <table style={{ width: '100%' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '33%', paddingTop: '24pt', borderTop: '1pt solid black', fontSize: '10pt' }}>
+                    Class Teacher Signature & Date
+                  </td>
+                  <td style={{ width: '33%' }}></td>
+                  <td style={{ width: '33%', paddingTop: '24pt', borderTop: '1pt solid black', fontSize: '10pt' }}>
+                    Program Manager Signature & Date
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
+        <div className="no-print">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
           {[
@@ -169,17 +364,127 @@ export default function ChildDetail() {
         {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+            {/* Basic Details Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <User size={15} className="text-brand-600" />
-                Basic Details
-              </h3>
-              <InfoRow label="Date of Birth" value={child.date_of_birth} />
-              <InfoRow label="Gender" value={child.gender} />
-              <InfoRow label="Nationality" value={child.nationality} />
-              <InfoRow label="Class / Grade" value={child.class_grade} />
-              <InfoRow label="Date of Arrival" value={child.date_of_arrival} />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <User size={15} className="text-brand-600" />
+                  Basic Details
+                </h3>
+                {hasRole('admin') && !editingProfile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditForm({
+                        full_name: child.full_name,
+                        class_grade: child.class_grade || '',
+                        guardian_name: child.guardian_name || '',
+                        guardian_contact: child.guardian_contact || '',
+                        nationality: child.nationality || '',
+                        status: child.status,
+                      })
+                      setEditingProfile(true)
+                      setEditError('')
+                      setEditSuccess('')
+                    }}
+                    className="text-xs text-brand-600 hover:text-brand-700 border border-brand-200 px-3 py-1.5 rounded-lg"
+                  >
+                    ✏️ Edit
+                  </button>
+                )}
+              </div>
+
+              {editingProfile ? (
+                <div className="space-y-3">
+                  {editError && (
+                    <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded">{editError}</p>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Full Name</label>
+                    <input
+                      value={editForm.full_name || ''}
+                      onChange={e => setEditForm(p => ({ ...p, full_name: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Class / Grade</label>
+                    <input
+                      value={editForm.class_grade || ''}
+                      onChange={e => setEditForm(p => ({ ...p, class_grade: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nationality</label>
+                    <input
+                      value={editForm.nationality || ''}
+                      onChange={e => setEditForm(p => ({ ...p, nationality: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                    <select
+                      value={editForm.status || ''}
+                      onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    >
+                      <option value="active">Active</option>
+                      <option value="alumni">Alumni</option>
+                      <option value="transferred">Transferred</option>
+                      <option value="withdrawn">Withdrawn</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Guardian Name</label>
+                    <input
+                      value={editForm.guardian_name || ''}
+                      onChange={e => setEditForm(p => ({ ...p, guardian_name: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Guardian Contact</label>
+                    <input
+                      value={editForm.guardian_contact || ''}
+                      onChange={e => setEditForm(p => ({ ...p, guardian_contact: e.target.value }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleProfileSave}
+                      className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingProfile(false); setEditError('') }}
+                      className="text-gray-500 hover:text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {editSuccess && (
+                    <p className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded mb-3">{editSuccess}</p>
+                  )}
+                  <InfoRow label="Date of Birth" value={child.date_of_birth} />
+                  <InfoRow label="Gender" value={child.gender} />
+                  <InfoRow label="Nationality" value={child.nationality} />
+                  <InfoRow label="Class / Grade" value={child.class_grade} />
+                  <InfoRow label="Date of Arrival" value={child.date_of_arrival} />
+                </>
+              )}
             </div>
+
+            {/* Guardian Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <Home size={15} className="text-brand-600" />
@@ -244,22 +549,88 @@ export default function ChildDetail() {
                 <div className="px-6 py-4 border-b border-gray-100">
                   <p className="text-sm text-gray-500">{grades.total_grades} grade records for {grades.child_name}</p>
                 </div>
-                <div className="divide-y divide-gray-50">
-                  {grades.grades.map(g => (
-                    <div key={g.id} className="px-6 py-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">{g.subject}</p>
-                        <p className="text-xs text-gray-400 capitalize">{g.term.replace('_', ' ')} · {g.academic_year}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900">{g.score}/{g.max_score}</p>
-                        <p className={`text-xs font-medium ${g.percentage >= 70 ? 'text-green-600' : g.percentage >= 50 ? 'text-yellow-600' : 'text-red-500'}`}>
-                          {g.percentage}%
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Subject</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Term</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Score</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Percentage</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Comments</th>
+                      <th className="px-6 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grades.grades.map(g => (
+                      <tr key={g.id}>
+                        <td className="px-6 py-4 font-medium text-gray-900 text-sm">{g.subject}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 capitalize">{g.term.replace('_', ' ')}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {editingGrade === g.id ? (
+                            <input
+                              type="number"
+                              value={gradeEditForm.score ?? g.score}
+                              onChange={e => setGradeEditForm(p => ({ ...p, score: parseFloat(e.target.value) }))}
+                              className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                            />
+                          ) : (
+                            `${g.score}/${g.max_score}`
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-sm font-semibold ${g.percentage >= 70 ? 'text-green-600' : g.percentage >= 50 ? 'text-yellow-600' : 'text-red-500'}`}>
+                            {g.percentage}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-400 italic">
+                          {editingGrade === g.id ? (
+                            <input
+                              value={gradeEditForm.comments ?? g.comments ?? ''}
+                              onChange={e => setGradeEditForm(p => ({ ...p, comments: e.target.value }))}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                              placeholder="Comments"
+                            />
+                          ) : (
+                            g.comments || '—'
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {hasRole('admin', 'teacher') && (
+                            editingGrade === g.id ? (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleGradeSave(g.id)}
+                                  className="text-xs bg-green-600 text-white px-2 py-1 rounded"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingGrade(null)}
+                                  className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingGrade(g.id)
+                                  setGradeEditForm({ score: g.score, comments: g.comments })
+                                }}
+                                className="text-xs text-brand-600 hover:text-brand-700"
+                              >
+                                ✏️ Edit
+                              </button>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </>
             ) : (
               <div className="py-16 text-center text-gray-400 text-sm">
@@ -390,6 +761,7 @@ export default function ChildDetail() {
             )}
           </div>
         )}
+        </div>
       </div>
     </Layout>
   )
